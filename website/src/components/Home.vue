@@ -1,9 +1,15 @@
 <template>
-  <div class="hello">
-    <h1 id="">Cosmo Daily Journaling</h1>
-    <div>New Post</div>
+  <div id="home-page">
+    <div id="page-header">
+      <h1>Cosmo Daily Journaling</h1>
+      <nav>
+        <div>New Post</div>
+        <div>Existing posts</div>
+      </nav>
+    </div>
+    <PostHistory v-if="currentTab=='postHistory'"></PostHistory>
 
-    <div>
+    <div v-if="currentTab=='newPost'">
       <h2>New Post Page</h2>
       <div id="post-workspace">
         <textarea id="raw-post" aria-label="postText" v-model="postText"></textarea>
@@ -27,6 +33,7 @@ import { marked } from 'marked';
 import { ref, shallowRef } from 'vue';
 import axios from 'axios';
 import secrets from '../../secrets.json';
+import PostHistory from './PostHistory.vue';
 
 const strapiAxios = axios.create({
   baseURL: 'http://localhost:1337/api/',
@@ -44,14 +51,16 @@ export default {
       postText: ref('Today I went to the store. It was good. I did not like the look of someone there. I made a big oopsie at work. I am scared about the future.'),
       marked,
       summaries: shallowRef([]),
+      currentTab: ref('newPost'),
     };
   },
+  components: { PostHistory },
   methods: {
     async summarizePost() {
       const { data: result } = await openaiAxios({
         method: 'post',
         data: {
-          prompt: `${this.postText}\n\nThree line bullet point summary, each with three words:\n`,
+          prompt: `${this.postText}\n\nwhat is the highlight of this text in 5 words or less:\n`,
           max_tokens: 500,
           temperature: 1,
           top_p: 1,
@@ -84,6 +93,14 @@ export default {
 </script>
 
 <style lang="scss">
+  #page-header {
+    display: flex;
+    align-items: center;
+
+    nav {
+      display: flex;
+    }
+  }
 .clickable {
   cursor: pointer;
 }

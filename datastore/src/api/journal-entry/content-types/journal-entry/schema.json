@@ -4,7 +4,8 @@
   "info": {
     "singularName": "journal-entry",
     "pluralName": "journal-entries",
-    "displayName": "Journal Entry"
+    "displayName": "Journal Entry",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -13,9 +14,6 @@
   "attributes": {
     "content": {
       "type": "text"
-    },
-    "date": {
-      "type": "datetime"
     }
   }
 }
