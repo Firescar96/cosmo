@@ -1,6 +1,7 @@
 # Cosmo
 This is a journaling app
 
-It accepts posts in markdown, saves them to a strapi database, uses GPT3 to generate summaries, and uses a local instance of stable diffusion to generate images associated with those summaries.
+It accepts posts in markdown, saves them to a strapi database, uses GPT3 to generate summaries, and uses DALLE-2 to generate an image from that summary.
 
-My GPU has 8GB of VRAM, less than the 10 required for the canonical version of stable-diffusion so I copied the `optimizedSD/optimized_txt2img.py` script from [basujindal/stable-diffusion](https://github.com/basujindal/stable-diffusion)
+<img src="./cosmo-ui-1.png">
+<img src="./cosmo-ui-2.png">
