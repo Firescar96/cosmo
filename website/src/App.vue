@@ -15,8 +15,20 @@ export default {
 
 <style lang="scss">
 @import './components/shared.scss';
+
+@font-face {
+  font-family: "Roboto";
+  src: url("./Roboto-Regular.ttf");
+}
+
+html, body {
+  height: 100vh;
+  margin: 0;
+}
+
 body {
-  background: $background-1;
+  background: url('./background.jpg');
+  background-size: cover;
   color: white;
 }
 
@@ -25,5 +37,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
   width: 100%;
+  font-family: Roboto, Georgia,serif;
 }
 </style>

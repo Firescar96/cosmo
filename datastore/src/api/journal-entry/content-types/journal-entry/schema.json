@@ -14,6 +14,20 @@
   "attributes": {
     "content": {
       "type": "text"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "coverArts": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
     }
   }
 }

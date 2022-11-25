@@ -1,20 +1,27 @@
 <template>
   <div id="existingPostPage">
-    <div>Existing posts</div>
-    <main>
-      <div v-for="post in posts" :key="post.createdAt" @click="selectedPost=post">
+    <div id="postList">
+      <div
+      class="clickable postSummary" v-for="post in posts" :key="post.createdAt"
+      @click="selectedPost=post">
         {{dayjs(post.createdAt).format('YYYY-MM-DD')}}
+        {{post.summary}}
       </div>
-      <div v-if="selectedPost">
-        {{selectedPost.content}}
-      </div>
-    </main>
+    </div>
+    <div v-if="selectedPost" id="parsedPost">
+      <div v-html="marked.parse(selectedPost.content)"></div>
+
+      <div v-for="image in selectedPost.coverArts.data" :key="image">
+          <img :src="'http://localhost:1337'+image.attributes.url">
+        </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref } from 'vue';
 import dayjs from 'dayjs';
+import { marked } from 'marked';
 import axios from 'axios';
 import secrets from '../../secrets.json';
 
@@ -22,16 +29,18 @@ const strapiAxios = axios.create({
   baseURL: 'http://localhost:1337/api/',
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
+
 export default {
   setup() {
     return {
+      marked,
       posts: ref([]),
       dayjs,
       selectedPost: ref(null),
     };
   },
   async created() {
-    const { data } = await strapiAxios.get('/journal-entries');
+    const { data } = await strapiAxios.get('/journal-entries?populate=*');
     this.posts = data.data.map((x) => x.attributes);
   },
   methods: {
@@ -41,12 +50,29 @@ export default {
 
 <style lang="scss">
 #existingPostPage {
-  main {
-    display: flex;
+  display: flex;
+  overflow-y: hidden;
 
-    >div {
-      flex: 1;
+  >div {
+    flex: 1;
+  }
+
+  #postList {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .postSummary {
+      margin: 10px;
+      padding: 10px 20px;
+      background: transparentize(#000000, .5);
+      display: inline-block;
+      font-size: 20px;
     }
+  }
+
+  #parsedPost {
+    overflow-y: auto;
   }
 }
 </style>

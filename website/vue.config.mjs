@@ -10,5 +10,5 @@ export default {
       },
     },
   },
-
+  lintOnSave: process.env.NODE_ENV !== 'production',
 };

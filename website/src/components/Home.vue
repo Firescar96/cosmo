@@ -11,19 +11,27 @@
 
     <div v-if="currentTab=='newPost'">
       <div id="post-workspace">
-        <textarea id="raw-post" aria-label="postText" v-model="postText"></textarea>
+        <textarea id="raw-post" placeholder="let your thoughts go" aria-label="postText" v-model="postText"></textarea>
        <div id="parsed-post" v-html="marked.parse(postText)"></div>
       </div>
       <div id="finalize-post-section">
-        <div v-if="summaries.length">
-          Summaries
-          <div v-for="(summary, index) in summaries" :key="'summary'+index">
+        <div class="button" @click="summarizePost">Process</div>
+        <div class="button" @click="generateImage">Make Image</div>
+        <div class="button" @click="submitPost">Submit</div>
+      </div>
+      <div>
+
+        <div v-if="summary.length">
+          Summary
+          <div>
             {{summary}}
           </div>
         </div>
 
-        <div class="button" @click="summarizePost">Process</div>
-        <div class="button" @click="submitPost">Submit</div>
+        <div v-for="image in images" :key="image.imageURL">
+          <img :src="image.imageURL">
+        </div>
+
       </div>
     </div>
   </div>
@@ -33,6 +41,7 @@
 import { marked } from 'marked';
 import { ref, shallowRef } from 'vue';
 import axios from 'axios';
+import { Configuration, OpenAIApi } from 'openai';
 import secrets from '../../secrets.json';
 import PostHistory from './PostHistory.vue';
 
@@ -45,81 +54,20 @@ const openaiAxios = axios.create({
   headers: { Authorization: `Bearer ${secrets.openai}` },
 });
 
-// eslint-disable-next-line quotes
-const markdownExample = `
-
-An h1 header
-============
-
-Paragraphs are separated by a blank line.
-
-2nd paragraph. *Italic*, **bold**, and \`monospace\`. Itemized lists
-look like:
-
-  * this one
-  * that one
-  * the other one
-
-Note that --- not considering the asterisk --- the actual text
-content starts at 4-columns in.
-
-> Block quotes are
-> written like so.
->
-> They can span multiple paragraphs,
-> if you like.
-
-Use 3 dashes for an em-dash. Use 2 dashes for ranges (ex., "it's all
-in chapters 12--14"). Three dots ... will be converted to an ellipsis.
-Unicode is supported. ☺
-
-
-
-An h2 header
-------------
-
-Here's a numbered list:
-
- 1. first item
- 2. second item
- 3. third item
-
-Note again how the actual text starts at 4 columns in (4 characters
-from the left side). Here's a code sample:
-
-    # Let me re-iterate ...
-    for i in 1 .. 10 { do-something(i) }
-
-As you probably guessed, indented 4 spaces. By the way, instead of
-indenting the block, you can use delimited blocks, if you like:
-
-~~~
-define foobar() {
-    print "Welcome to flavor country!";
-}
-~~~
-
-(which makes copying & pasting easier). You can optionally mark the
-delimited block for Pandoc to syntax highlight it:
-
-~~~python
-import time
-# Quick, count to ten!
-for i in range(10):
-    # (but not *too* quick)
-    time.sleep(0.5)
-    print(i)
-~~~
-`;
+const configuration = new Configuration({
+  apiKey: secrets.openai,
+});
+const openai = new OpenAIApi(configuration);
 
 export default {
   name: 'HomePage',
   setup() {
     return {
-      postText: ref(`Today I went to the store. It was good. I did not like the look of someone there. I made a big oopsie at work. I am scared about the future.${markdownExample}`),
+      postText: ref(''),
       marked,
-      summaries: shallowRef([]),
+      summary: shallowRef(''),
       currentTab: ref('newPost'),
+      images: shallowRef([]),
     };
   },
   components: { PostHistory },
@@ -128,7 +76,7 @@ export default {
       const { data: result } = await openaiAxios({
         method: 'post',
         data: {
-          prompt: `${this.postText}\n\nwhat is the highlight of this text in 5 words or less:\n`,
+          prompt: `${this.postText}\n\ngive 5 concepts to describe the paragraphs:\n`,
           max_tokens: 500,
           temperature: 1,
           top_p: 1,
@@ -139,21 +87,64 @@ export default {
         url: '/completions',
         baseURL: 'https://api.openai.com/v1/engines/text-davinci-002',
       });
-      const summaries = result.choices[0].text
+      const summary = result.choices[0].text
         .match(/[a-zA-Z].*/g);
 
-      this.summaries = summaries.splice(0, 3);
+      [this.summary] = summary.splice(0, 3);
+    },
+
+    async generateImage() {
+      const { data: openaiData } = await openai.createImage({
+        prompt: this.summary,
+        n: 2,
+        size: '512x512',
+      });
+      // const openaiData = {
+      //   data: [{
+      //     url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-VsaiMoQpDg5ZiZtAYP0r36Pp/user-AoukX2y6S3JTu0YXuQyoC5q4/img-TjIWDl91pcHtAqMhDtEsDwye.png?st=2022-11-07T03%3A21%3A05Z&se=2022-11-07T05%3A21%3A05Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2022-11-07T01%3A53%3A46Z&ske=2022-11-08T01%3A53%3A46Z&sks=b&skv=2021-08-06&sig=AIMTBkz5YH9lsqr0aEmlZacZ6bCcrqVu0CThJdQOXDs%3D',
+      //   }],
+      // };
+
+      this.images = await Promise.all(openaiData.data.map(async (imageData) => {
+        const { data: imageStream } = await axios.post(
+          'http://localhost:8000/imageProxy',
+          { url: imageData.url },
+          { responseType: 'blob' },
+        );
+        console.log(Object.keys(imageStream));
+        const fileName = this.summary.slice(0, 22);
+        return {
+          imageURL: imageData.url,
+          imageStream: new File([imageStream], fileName, { type: 'image/png' }),
+          fileName,
+        };
+      }));
+
+      console.log(this.images);
+    },
+
+    clear() {
+      this.summary = '';
+      this.postText = '';
+      this.images = [];
     },
 
     async submitPost() {
-      console.log('hello');
-      await strapiAxios.post({ url: '/journal-entries' }, {
-        data: {
-          content: this.postText,
-          summaries: this.summaries,
-          date: new Date(),
-        },
+      const formData = new FormData();
+
+      const data = {
+        content: this.postText,
+        summary: this.summary,
+      };
+      formData.append('data', JSON.stringify(data));
+
+      this.images.forEach((imageData) => {
+        formData.append('files.coverArts', imageData.imageStream, imageData.fileName);
       });
+
+      await strapiAxios.post('/journal-entries', formData);
+
+      this.clear();
     },
 
   },
@@ -161,7 +152,17 @@ export default {
 </script>
 
 <style lang="scss">
+@font-face {
+    font-family: "Aladin";
+    src: url("./Aladin-Regular.ttf");
+}
+
 #home-page {
+  height: 100vh;
+  margin: 0 10px;
+  display: flex;
+  flex-direction: column;
+
   #page-header {
     display: flex;
     align-items: center;
@@ -175,6 +176,7 @@ export default {
         padding: 10px 20px;
         margin: auto 10px;
         border: solid 1px $background-2;
+        background: transparentize($background-1, .05);
 
         &.selected {
           box-shadow: 0 0 25px 2px $background-2;
@@ -189,7 +191,10 @@ export default {
   }
 
   #post-workspace {
-    display: flex;
+    display: grid;
+    grid-template-columns: 50% 50%;
+    grid-template-rows: 100%;
+    column-gap: 10px;
 
     h1 {
       text-align: center;
@@ -197,16 +202,23 @@ export default {
 
     #raw-post {
       flex: 1;
-      height: 500px;
       padding: 10px;
-      background: $background-2;
+      background: transparentize($background-1, .1);
       color: white;
       height: 70vh;
       max-height: 70vh;
     }
+
     #parsed-post {
-      flex: 1;
-      padding: 0 20px;
+      padding: 10px;
+      font-family: 'Aladin';
+      font-size: 20px;
+      letter-spacing: 2px;
+      overflow-y: auto;
+      height: 70vh;
+      max-height: 70vh;
+      border: solid 1px $background-1;
+      background: transparentize($background-1, .1);
     }
   }
 
