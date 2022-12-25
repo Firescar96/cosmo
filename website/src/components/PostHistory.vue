@@ -12,6 +12,7 @@
       <div v-html="marked.parse(selectedPost.content)"></div>
 
       <div v-for="image in selectedPost.coverArts.data" :key="image">
+        {{ image }}
           <img :src="'http://localhost:1337'+image.attributes.url">
         </div>
     </div>
@@ -72,6 +73,8 @@ export default {
   }
 
   #parsedPost {
+    padding: 10px 20px;
+    background: transparentize(#000000, .5);
     overflow-y: auto;
   }
 }

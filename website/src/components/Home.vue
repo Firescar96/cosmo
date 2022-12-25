@@ -12,8 +12,22 @@
     <div v-if="currentTab=='newPost'">
       <div id="post-workspace">
         <textarea id="raw-post" placeholder="let your thoughts go" aria-label="postText" v-model="postText"></textarea>
-       <div id="parsed-post" v-html="marked.parse(postText)"></div>
+       <div id="parsed-post" v-html="marked.parse(previewText)"></div>
       </div>
+
+      <label>
+        Upload image
+        <input type="file" accept="image/*" style="position: fixed; top: -100%" multiple="true" @change="imageUploaded">
+      </label>
+
+      <div v-for="image in uploadedImages" :key="image.name">
+        <span>{{image.name }}</span>
+        <span
+          @click="navigator.clipboard.writeText(`![${image.name}](${image.name})\n<figcaption></figcaption>`)"
+          class="material-icons clickable">content_copy
+        </span>
+      </div>
+
       <div id="finalize-post-section">
         <div class="button" @click="summarizePost">Process</div>
         <div class="button" @click="generateImage">Make Image</div>
@@ -28,7 +42,7 @@
           </div>
         </div>
 
-        <div v-for="image in images" :key="image.imageURL">
+        <div v-for="image in coverArts" :key="image.imageURL">
           <img :src="image.imageURL">
         </div>
 
@@ -39,7 +53,7 @@
 
 <script>
 import { marked } from 'marked';
-import { ref, shallowRef } from 'vue';
+import { ref, shallowRef, shallowReactive } from 'vue';
 import axios from 'axios';
 import { Configuration, OpenAIApi } from 'openai';
 import secrets from '../../secrets.json';
@@ -67,8 +81,21 @@ export default {
       marked,
       summary: shallowRef(''),
       currentTab: ref('newPost'),
-      images: shallowRef([]),
+      coverArts: shallowReactive([]),
+      uploadedImages: shallowReactive([]),
+      URL,
+      navigator,
     };
+  },
+  computed: {
+    previewText() {
+      let result = this.postText;
+      this.uploadedImages.forEach((image) => {
+        result = result.replace(`(${image.name})`, `(${URL.createObjectURL(image)})`);
+      });
+      return result;
+    }
+    ,
   },
   components: { PostHistory },
   methods: {
@@ -99,13 +126,8 @@ export default {
         n: 2,
         size: '512x512',
       });
-      // const openaiData = {
-      //   data: [{
-      //     url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-VsaiMoQpDg5ZiZtAYP0r36Pp/user-AoukX2y6S3JTu0YXuQyoC5q4/img-TjIWDl91pcHtAqMhDtEsDwye.png?st=2022-11-07T03%3A21%3A05Z&se=2022-11-07T05%3A21%3A05Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2022-11-07T01%3A53%3A46Z&ske=2022-11-08T01%3A53%3A46Z&sks=b&skv=2021-08-06&sig=AIMTBkz5YH9lsqr0aEmlZacZ6bCcrqVu0CThJdQOXDs%3D',
-      //   }],
-      // };
 
-      this.images = await Promise.all(openaiData.data.map(async (imageData) => {
+      this.coverArts = await Promise.all(openaiData.data.map(async (imageData) => {
         const { data: imageStream } = await axios.post(
           'http://localhost:8000/imageProxy',
           { url: imageData.url },
@@ -119,14 +141,12 @@ export default {
           fileName,
         };
       }));
-
-      console.log(this.images);
     },
 
     clear() {
       this.summary = '';
       this.postText = '';
-      this.images = [];
+      this.coverArts = [];
     },
 
     async submitPost() {
@@ -138,8 +158,11 @@ export default {
       };
       formData.append('data', JSON.stringify(data));
 
-      this.images.forEach((imageData) => {
+      this.coverArts.forEach((imageData) => {
         formData.append('files.coverArts', imageData.imageStream, imageData.fileName);
+      });
+      this.uploadedImages.forEach((imageData) => {
+        formData.append('files.documents', imageData.imageStream, imageData.fileName);
       });
 
       await strapiAxios.post('/journal-entries', formData);
@@ -147,6 +170,9 @@ export default {
       this.clear();
     },
 
+    imageUploaded(event) {
+      this.uploadedImages.push(...event.target.files);
+    },
   },
 };
 </script>
@@ -219,6 +245,21 @@ export default {
       max-height: 70vh;
       border: solid 1px $background-1;
       background: transparentize($background-1, .1);
+
+      p {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+      }
+
+      img {
+        width: 50%;
+        margin: 5px auto;
+      }
+
+      figcaption {
+        text-align: center;
+      }
     }
   }
 
