@@ -11,8 +11,7 @@
     <div v-if="selectedPost" id="parsedPost">
       <div v-html="marked.parse(selectedPost.content)"></div>
 
-      <div v-for="image in selectedPost.coverArts.data" :key="image">
-        {{ image }}
+      <div v-for="image in selectedPost.coverArts.data" :key="image.id">
           <img :src="'http://localhost:1337'+image.attributes.url">
         </div>
     </div>
@@ -42,7 +41,16 @@ export default {
   },
   async created() {
     const { data } = await strapiAxios.get('/journal-entries?populate=*');
-    this.posts = data.data.map((x) => x.attributes);
+    this.posts = data.data.map((x) => {
+      const post = x.attributes;
+
+      if (post.documents.data) {
+        post.documents.data.forEach((image) => {
+          post.content = post.content.replace(`(${image.attributes.name})`, `(http://localhost:1337${image.attributes.url})`);
+        });
+      }
+      return post;
+    });
   },
   methods: {
   },
@@ -76,6 +84,21 @@ export default {
     padding: 10px 20px;
     background: transparentize(#000000, .5);
     overflow-y: auto;
+
+    p {
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    img {
+      width: 50%;
+      margin: 5px auto;
+    }
+
+    figcaption {
+      text-align: center;
+    }
   }
 }
 </style>

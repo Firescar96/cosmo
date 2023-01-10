@@ -20,16 +20,20 @@
         <input type="file" accept="image/*" style="position: fixed; top: -100%" multiple="true" @change="imageUploaded">
       </label>
 
-      <div v-for="image in uploadedImages" :key="image.name">
+      <div v-for="image in uploadedImages" :key="image.name" class="upload-row">
+        <span
+          @click="uploadedImages.splice(uploadedImages.findIndex(x => x == image), 1)"
+          class="material-icons clickable">close
+        </span>
         <span>{{image.name }}</span>
         <span
-          @click="navigator.clipboard.writeText(`![${image.name}](${image.name})\n<figcaption></figcaption>`)"
+          @click="navigator.clipboard.writeText(`\n\n![${image.name}](${image.name})\n<figcaption></figcaption>\n\n`)"
           class="material-icons clickable">content_copy
         </span>
       </div>
 
       <div id="finalize-post-section">
-        <div class="button" @click="summarizePost">Process</div>
+        <div class="button" @click="processPost">Process</div>
         <div class="button" @click="generateImage">Make Image</div>
         <div class="button" @click="submitPost">Submit</div>
       </div>
@@ -42,6 +46,7 @@
           </div>
         </div>
 
+        {{ coverArts.length }}
         <div v-for="image in coverArts" :key="image.imageURL">
           <img :src="image.imageURL">
         </div>
@@ -53,7 +58,7 @@
 
 <script>
 import { marked } from 'marked';
-import { ref, shallowRef, shallowReactive } from 'vue';
+import { ref, shallowRef } from 'vue';
 import axios from 'axios';
 import { Configuration, OpenAIApi } from 'openai';
 import secrets from '../../secrets.json';
@@ -64,7 +69,7 @@ const strapiAxios = axios.create({
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
 const openaiAxios = axios.create({
-  baseURL: 'https://api.openai.com/v1/engines/davinci',
+  baseURL: 'https://api.openai.com/v1/',
   headers: { Authorization: `Bearer ${secrets.openai}` },
 });
 
@@ -81,8 +86,8 @@ export default {
       marked,
       summary: shallowRef(''),
       currentTab: ref('newPost'),
-      coverArts: shallowReactive([]),
-      uploadedImages: shallowReactive([]),
+      coverArts: shallowRef([]),
+      uploadedImages: shallowRef([]),
       URL,
       navigator,
     };
@@ -99,7 +104,7 @@ export default {
   },
   components: { PostHistory },
   methods: {
-    async summarizePost() {
+    async processPost() {
       const { data: result } = await openaiAxios({
         method: 'post',
         data: {
@@ -111,29 +116,35 @@ export default {
           presence_penalty: 0,
           best_of: 1,
         },
-        url: '/completions',
-        baseURL: 'https://api.openai.com/v1/engines/text-davinci-002',
+        url: '/engines/text-davinci-002/completions',
       });
       const summary = result.choices[0].text
         .match(/[a-zA-Z].*/g);
 
       [this.summary] = summary.splice(0, 3);
+
+      this.generateImage();
     },
 
     async generateImage() {
-      const { data: openaiData } = await openai.createImage({
-        prompt: this.summary,
-        n: 2,
-        size: '512x512',
+      const { data: openaiData } = await openaiAxios({
+        method: 'post',
+        data: {
+          prompt: this.summary,
+          n: 2,
+          size: '512x512',
+        },
+        url: '/images/generations',
       });
 
       this.coverArts = await Promise.all(openaiData.data.map(async (imageData) => {
+        console.log('imageData', imageData);
         const { data: imageStream } = await axios.post(
           'http://localhost:8000/imageProxy',
           { url: imageData.url },
           { responseType: 'blob' },
         );
-        console.log(Object.keys(imageStream));
+        console.log(imageStream);
         const fileName = this.summary.slice(0, 22);
         return {
           imageURL: imageData.url,
@@ -141,12 +152,14 @@ export default {
           fileName,
         };
       }));
+      console.log(this.coverArts.length);
     },
 
     clear() {
       this.summary = '';
       this.postText = '';
       this.coverArts = [];
+      this.uploadedImages = [];
     },
 
     async submitPost() {
@@ -162,7 +175,8 @@ export default {
         formData.append('files.coverArts', imageData.imageStream, imageData.fileName);
       });
       this.uploadedImages.forEach((imageData) => {
-        formData.append('files.documents', imageData.imageStream, imageData.fileName);
+        console.log('imageData', imageData);
+        formData.append('files.documents', imageData, imageData.fileName);
       });
 
       await strapiAxios.post('/journal-entries', formData);
@@ -261,6 +275,11 @@ export default {
         text-align: center;
       }
     }
+  }
+
+  .upload-row {
+    display: flex;
+    align-items: center;
   }
 
   #finalize-post-section {
