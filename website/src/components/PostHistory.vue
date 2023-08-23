@@ -12,7 +12,7 @@
       <div v-html="marked.parse(selectedPost.content)"></div>
 
       <div v-for="image in selectedPost.coverArts.data" :key="image.id">
-          <img :src="'http://localhost:1337'+image.attributes.url">
+          <img :src="vars.strapiURL+image.attributes.url">
         </div>
     </div>
   </div>
@@ -24,15 +24,17 @@ import dayjs from 'dayjs';
 import { marked } from 'marked';
 import axios from 'axios';
 import secrets from '../../secrets.json';
+import vars from '../../vars.json';
 
 const strapiAxios = axios.create({
-  baseURL: 'http://localhost:1337/api/',
+  baseURL: vars.strapiURL+'/api',
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
 
 export default {
   setup() {
     return {
+      vars,
       marked,
       posts: ref([]),
       dayjs,
@@ -46,7 +48,7 @@ export default {
 
       if (post.documents.data) {
         post.documents.data.forEach((image) => {
-          post.content = post.content.replace(`(${image.attributes.name})`, `(http://localhost:1337${image.attributes.url})`);
+          post.content = post.content.replace(`(${image.attributes.name})`, `(${vars.strapiURL+image.attributes.url})`);
         });
       }
       return post;

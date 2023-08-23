@@ -46,7 +46,6 @@
           </div>
         </div>
 
-        {{ coverArts.length }}
         <div v-for="image in coverArts" :key="image.imageURL">
           <img :src="image.imageURL">
         </div>
@@ -62,10 +61,11 @@ import { ref, shallowRef } from 'vue';
 import axios from 'axios';
 import { Configuration, OpenAIApi } from 'openai';
 import secrets from '../../secrets.json';
+import vars from '../../vars.json';
 import PostHistory from './PostHistory.vue';
 
 const strapiAxios = axios.create({
-  baseURL: 'http://localhost:1337/api/',
+  baseURL: vars.strapiURL+'/api',
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
 const openaiAxios = axios.create({
@@ -138,13 +138,12 @@ export default {
       });
 
       this.coverArts = await Promise.all(openaiData.data.map(async (imageData) => {
-        console.log('imageData', imageData);
         const { data: imageStream } = await axios.post(
-          'http://localhost:8000/imageProxy',
+          `${window.location.origin}/imageProxy`,
           { url: imageData.url },
           { responseType: 'blob' },
         );
-        console.log(imageStream);
+
         const fileName = this.summary.slice(0, 22);
         return {
           imageURL: imageData.url,
@@ -152,7 +151,6 @@ export default {
           fileName,
         };
       }));
-      console.log(this.coverArts.length);
     },
 
     clear() {
@@ -175,7 +173,6 @@ export default {
         formData.append('files.coverArts', imageData.imageStream, imageData.fileName);
       });
       this.uploadedImages.forEach((imageData) => {
-        console.log('imageData', imageData);
         formData.append('files.documents', imageData, imageData.fileName);
       });
 

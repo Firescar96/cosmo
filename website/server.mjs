@@ -5,8 +5,6 @@ import axios from 'axios';
 import cors from 'cors';
 import process from 'process';
 
-process.chdir('./backend');
-
 const httpApp = express();
 httpApp.use(cors());
 httpApp.use(express.json())

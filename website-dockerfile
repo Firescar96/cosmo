@@ -1,0 +1,12 @@
+FROM node:18
+ENV PORT 80
+
+RUN apt-get update
+
+WORKDIR /root
+
+ADD server.mjs server.mjs
+ADD dist dist
+ADD node_modules node_modules
+
+CMD node server.mjs

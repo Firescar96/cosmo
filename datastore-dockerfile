@@ -1,0 +1,17 @@
+FROM node:18
+ENV PORT 80
+
+RUN apt-get update
+
+WORKDIR /root
+
+ADD build build
+ADD package.json package.json
+ADD node_modules node_modules
+ADD config config
+ADD src src
+ADD .env .env
+ADD favicon.ico favicon.ico
+ADD public/robots.txt public/robots.txt
+
+CMD NODE_ENV=production yarn start
