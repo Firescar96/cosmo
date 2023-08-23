@@ -59,13 +59,13 @@
 import { marked } from 'marked';
 import { ref, shallowRef } from 'vue';
 import axios from 'axios';
-import { Configuration, OpenAIApi } from 'openai';
+// import { Configuration, OpenAIApi } from 'openai';
 import secrets from '../../secrets.json';
 import vars from '../../vars.json';
 import PostHistory from './PostHistory.vue';
 
 const strapiAxios = axios.create({
-  baseURL: vars.strapiURL+'/api',
+  baseURL: `${vars.strapiURL}/api`,
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
 const openaiAxios = axios.create({
@@ -73,10 +73,10 @@ const openaiAxios = axios.create({
   headers: { Authorization: `Bearer ${secrets.openai}` },
 });
 
-const configuration = new Configuration({
-  apiKey: secrets.openai,
-});
-const openai = new OpenAIApi(configuration);
+// const configuration = new Configuration({
+//   apiKey: secrets.openai,
+// });
+// const openai = new OpenAIApi(configuration);
 
 export default {
   name: 'HomePage',

@@ -27,7 +27,7 @@ import secrets from '../../secrets.json';
 import vars from '../../vars.json';
 
 const strapiAxios = axios.create({
-  baseURL: vars.strapiURL+'/api',
+  baseURL: `${vars.strapiURL}/api`,
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
 
@@ -42,13 +42,13 @@ export default {
     };
   },
   async created() {
-    const { data } = await strapiAxios.get('/journal-entries?populate=*');
+    const { data } = await strapiAxios.get('/journal-entries?sort=createdAt:DESC&populate=*');
     this.posts = data.data.map((x) => {
       const post = x.attributes;
 
       if (post.documents.data) {
         post.documents.data.forEach((image) => {
-          post.content = post.content.replace(`(${image.attributes.name})`, `(${vars.strapiURL+image.attributes.url})`);
+          post.content = post.content.replace(`(${image.attributes.name})`, `(${vars.strapiURL + image.attributes.url})`);
         });
       }
       return post;
