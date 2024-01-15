@@ -15,6 +15,7 @@ export default {
 
 <style lang="scss">
 @import './components/shared.scss';
+@import 'overlayscrollbars/overlayscrollbars.css';
 
 @font-face {
   font-family: "Roboto";

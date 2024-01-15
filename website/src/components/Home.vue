@@ -63,20 +63,18 @@ import axios from 'axios';
 import secrets from '../../secrets.json';
 import vars from '../../vars.json';
 import PostHistory from './PostHistory.vue';
+import OpenAI from "openai";
 
 const strapiAxios = axios.create({
   baseURL: `${vars.strapiURL}/api`,
   headers: { Authorization: `Bearer ${secrets.strapi}` },
 });
-const openaiAxios = axios.create({
-  baseURL: 'https://api.openai.com/v1/',
-  headers: { Authorization: `Bearer ${secrets.openai}` },
+
+const openai = new OpenAI({
+  apiKey: secrets.openai,
+  dangerouslyAllowBrowser: true
 });
 
-// const configuration = new Configuration({
-//   apiKey: secrets.openai,
-// });
-// const openai = new OpenAIApi(configuration);
 
 export default {
   name: 'HomePage',
@@ -105,20 +103,13 @@ export default {
   components: { PostHistory },
   methods: {
     async processPost() {
-      const { data: result } = await openaiAxios({
-        method: 'post',
-        data: {
-          prompt: `${this.postText}\n\ngive 5 concepts to describe the paragraphs:\n`,
-          max_tokens: 500,
-          temperature: 1,
-          top_p: 1,
-          frequency_penalty: 0,
-          presence_penalty: 0,
-          best_of: 1,
-        },
-        url: '/engines/text-davinci-002/completions',
-      });
-      const summary = result.choices[0].text
+      const result = await openai.chat.completions.create({
+        messages: [{"role": "system", "content": "You add helpful insights and facts with your summaries"},
+      {'role': 'user', 'content':  `${this.postText}\n\ngive 5 words to describe collectively all of the input text, not just the headers`}],
+        model: 'gpt-3.5-turbo'
+      })
+      
+      const summary = result.choices[0].message.content
         .match(/[a-zA-Z].*/g);
 
       [this.summary] = summary.splice(0, 3);
@@ -127,17 +118,16 @@ export default {
     },
 
     async generateImage() {
-      const { data: openaiData } = await openaiAxios({
-        method: 'post',
-        data: {
+
+      const {data: openaiData} = await openai.images.generate({
+          model: "dall-e-2",
           prompt: this.summary,
           n: 2,
-          size: '512x512',
-        },
-        url: '/images/generations',
-      });
+          size: "512x512",
+        });
+      console.log(openaiData);
 
-      this.coverArts = await Promise.all(openaiData.data.map(async (imageData) => {
+      this.coverArts = await Promise.all(openaiData.map(async (imageData) => {
         const { data: imageStream } = await axios.post(
           `${window.location.origin}/imageProxy`,
           { url: imageData.url },

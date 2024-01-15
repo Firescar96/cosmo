@@ -1,20 +1,20 @@
 <template>
   <div id="existingPostPage">
-    <div id="postList">
+    <OverlayScrollbarsComponent id="postList">
       <div
       class="clickable postSummary" v-for="post in posts" :key="post.createdAt"
       @click="selectedPost=post">
         {{dayjs(post.createdAt).format('YYYY-MM-DD')}}
         {{post.summary}}
       </div>
-    </div>
-    <div v-if="selectedPost" id="parsedPost">
+    </OverlayScrollbarsComponent>
+    <OverlayScrollbarsComponent v-if="selectedPost" id="parsedPost">
       <div v-html="marked.parse(selectedPost.content)"></div>
 
       <div v-for="image in selectedPost.coverArts.data" :key="image.id">
           <img :src="vars.strapiURL+image.attributes.url">
         </div>
-    </div>
+    </OverlayScrollbarsComponent>
   </div>
 </template>
 
@@ -25,6 +25,7 @@ import { marked } from 'marked';
 import axios from 'axios';
 import secrets from '../../secrets.json';
 import vars from '../../vars.json';
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 
 const strapiAxios = axios.create({
   baseURL: `${vars.strapiURL}/api`,
@@ -32,6 +33,9 @@ const strapiAxios = axios.create({
 });
 
 export default {
+  components: {
+    OverlayScrollbarsComponent,
+  },
   setup() {
     return {
       vars,
@@ -85,7 +89,6 @@ export default {
   #parsedPost {
     padding: 10px 20px;
     background: transparentize(#000000, .5);
-    overflow-y: auto;
 
     p {
       display: flex;
