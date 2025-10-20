@@ -23,9 +23,9 @@ import { ref } from 'vue';
 import dayjs from 'dayjs';
 import { marked } from 'marked';
 import axios from 'axios';
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue';
 import secrets from '../../secrets.json';
 import vars from '../../vars.json';
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 
 const strapiAxios = axios.create({
   baseURL: `${vars.strapiURL}/api`,

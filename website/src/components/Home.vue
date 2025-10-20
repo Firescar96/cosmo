@@ -60,10 +60,10 @@ import { marked } from 'marked';
 import { ref, shallowRef } from 'vue';
 import axios from 'axios';
 // import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 import secrets from '../../secrets.json';
 import vars from '../../vars.json';
 import PostHistory from './PostHistory.vue';
-import OpenAI from "openai";
 
 const strapiAxios = axios.create({
   baseURL: `${vars.strapiURL}/api`,
@@ -72,9 +72,8 @@ const strapiAxios = axios.create({
 
 const openai = new OpenAI({
   apiKey: secrets.openai,
-  dangerouslyAllowBrowser: true
+  dangerouslyAllowBrowser: true,
 });
-
 
 export default {
   name: 'HomePage',
@@ -104,11 +103,11 @@ export default {
   methods: {
     async processPost() {
       const result = await openai.chat.completions.create({
-        messages: [{"role": "system", "content": "You add helpful insights and facts with your summaries"},
-      {'role': 'user', 'content':  `${this.postText}\n\ngive 5 words to describe collectively all of the input text, not just the headers`}],
-        model: 'gpt-3.5-turbo'
-      })
-      
+        messages: [{ role: 'system', content: 'You add helpful insights and facts with your summaries' },
+          { role: 'user', content: `${this.postText}\n\ngive a unique title based on a unique event from the diary entry, not just the headers` }],
+        model: 'gpt-5',
+      });
+
       const summary = result.choices[0].message.content
         .match(/[a-zA-Z].*/g);
 
@@ -118,13 +117,12 @@ export default {
     },
 
     async generateImage() {
-
-      const {data: openaiData} = await openai.images.generate({
-          model: "dall-e-2",
-          prompt: this.summary,
-          n: 2,
-          size: "512x512",
-        });
+      const { data: openaiData } = await openai.images.generate({
+        model: 'dall-e-3',
+        prompt: this.summary,
+        n: 1,
+        size: '1024x1024',
+      });
       console.log(openaiData);
 
       this.coverArts = await Promise.all(openaiData.map(async (imageData) => {
